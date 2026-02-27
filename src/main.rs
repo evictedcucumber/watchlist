@@ -1,8 +1,7 @@
 use clap::Parser;
-use example_rust_project::Cli;
+use watchlist::Cli;
 
 fn main() {
     let cli = Cli::parse();
-
-    println!("Hello {}", cli.name);
+    dbg!(cli);
 }

@@ -23,7 +23,7 @@
       };
     in {
       devShells.default = pkgs.mkShell {
-        name = "example-rust-project";
+        name = "watchlist";
         packages = with pkgs; [
           (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
           cargo-audit
