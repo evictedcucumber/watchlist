@@ -1,0 +1,115 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.rustup/toolchains/
+            ~/.cargo/registry/
+            target/
+          key: build-${{ hashFiles('**/Cargo.lock', '**/rust-toolchain.toml') }}
+
+      - name: Build
+        run: cargo build
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache
+        id: test-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.rustup/toolchains/
+            ~/.cargo/registry/
+            ~/.cargo/bin/
+            target/
+          key: test-${{ hashFiles('**/Cargo.lock', '**/rust-toolchain.toml') }}
+
+      - name: Install Nextest
+        if: steps.test-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-nextest --locked
+
+      - name: Test
+        run: cargo nextest run
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache
+        id: coverage-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.rustup/toolchains/
+            ~/.cargo/registry/
+            ~/.cargo/bin/
+          key: coverage-${{ hashFiles('**/Cargo.lock', '**/rust-toolchain.toml') }}
+
+      - name: Install Tarpaulin
+        if: steps.coverage-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-tarpaulin --locked
+
+      - name: Coverage
+        run: cargo tarpaulin --fail-under 80
+
+  dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache
+        id: dependencies-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.rustup/toolchains/
+            ~/.cargo/registry/
+            ~/.cargo/bin/
+          key: dependencies-${{ hashFiles('**/Cargo.lock', '**/rust-toolchain.toml') }}
+
+      - name: Install Audit
+        if: steps.dependencies-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit --locked
+
+      - name: Install Deny
+        if: steps.dependencies-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-deny --locked
+
+      - name: Audit
+        run: cargo audit
+
+      - name: Deny
+        run: cargo deny check
